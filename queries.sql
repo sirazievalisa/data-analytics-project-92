@@ -8,34 +8,67 @@
 SELECT count(*) AS customers_count
 FROM customers;
 
-
--- Отчет 3: с данными по выручке по каждому продавцу и дню недели
+-- Отчет 1: топ-10 продавцов по суммарной выручке и количеству сделок
 SELECT
-    t.seller,
-    t.day_of_week,
-    t.income
-FROM (
+    concat(e.first_name, ' ', e.last_name) AS seller,
+    count(*) AS operations,
+    floor(sum(p.price * s.quantity)) AS income
+FROM sales AS s
+INNER JOIN employees AS e
+    ON s.sales_person_id = e.employee_id
+INNER JOIN products AS p
+    ON s.product_id = p.product_id
+GROUP BY
+    seller
+ORDER BY
+    income DESC
+LIMIT 10;
+
+-- Отчет 2: продавцы, чья средняя выручка за сделку ниже общей средней
+WITH sales_by_seller AS (
     SELECT
         concat(e.first_name, ' ', e.last_name) AS seller,
-        lower(
-            trim(to_char(s.sale_date, 'FMDay'))
-        ) AS day_of_week,
-        extract(ISODOW FROM s.sale_date) AS day_number,
-        floor(sum(p.price * s.quantity)) AS income
+        sum(p.price * s.quantity) AS total_income,
+        count(*) AS operations
     FROM sales AS s
     INNER JOIN employees AS e
         ON s.sales_person_id = e.employee_id
     INNER JOIN products AS p
         ON s.product_id = p.product_id
     GROUP BY
-        seller,
-        day_of_week,
-        day_number
-) AS t
-ORDER BY
-    t.day_number,
-    t.seller;
+        seller
+),
 
+global_avg AS (
+    SELECT sum(total_income) / sum(operations) AS avg_income_all
+    FROM sales_by_seller
+)
+
+SELECT
+    sbs.seller,
+    floor(sbs.total_income / sbs.operations) AS average_income
+FROM sales_by_seller AS sbs
+CROSS JOIN global_avg AS ga
+WHERE (sbs.total_income / sbs.operations) < ga.avg_income_all
+ORDER BY
+    average_income ASC;
+
+-- Отчет 3: с данными по выручке по каждому продавцу и дню недели
+SELECT
+    concat(e.first_name, ' ', e.last_name) AS seller,
+    lower(trim(to_char(s.sale_date, 'FMDay'))) AS day_of_week,
+    floor(sum(p.price * s.quantity)) AS income
+FROM sales AS s
+INNER JOIN employees AS e
+    ON s.sales_person_id = e.employee_id
+INNER JOIN products AS p
+    ON s.product_id = p.product_id
+GROUP BY
+    seller,
+    day_of_week
+ORDER BY
+    extract(ISODOW FROM s.sale_date),
+    seller;
 
 -- Таблица с разбивкой на возрастные группы покупателей
 SELECT
@@ -48,7 +81,6 @@ SELECT
 FROM customers
 GROUP BY age_category
 ORDER BY age_category;
-
 
 -- Таблица с количеством покупателей и выручкой по месяцам
 SELECT
@@ -93,3 +125,4 @@ WHERE
     ps.rn = 1
     AND p.price = 0
 ORDER BY c.customer_id;
+
