@@ -8,6 +8,7 @@
 SELECT count(*) AS customers_count
 FROM customers;
 
+
 -- Отчет 1: топ-10 продавцов по суммарной выручке и количеству сделок
 SELECT
     concat(e.first_name, ' ', e.last_name) AS seller,
@@ -23,6 +24,7 @@ GROUP BY
 ORDER BY
     income DESC
 LIMIT 10;
+
 
 -- Отчет 2: продавцы, чья средняя выручка за сделку ниже общей средней
 WITH sales_by_seller AS (
@@ -52,6 +54,7 @@ CROSS JOIN global_avg AS ga
 WHERE (sbs.total_income / sbs.operations) < ga.avg_income_all
 ORDER BY
     average_income ASC;
+
 
 -- Отчет 3: с данными по выручке по каждому продавцу и дню недели
 SELECT
