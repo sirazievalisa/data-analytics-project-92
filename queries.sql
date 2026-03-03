@@ -125,4 +125,3 @@ WHERE
     ps.rn = 1
     AND p.price = 0
 ORDER BY c.customer_id;
-
